@@ -70,6 +70,18 @@ app.use((err, req, res, next) => {
 
 // ── 6. Start + DB ────────────────────────────────────────────────────────────
 app.listen(port, async () => {
-  console.log(`Server is running on port ${port}`);
-  await connectDb();
+  const startServer = async () => {
+  try {
+    await connectDb();
+
+    app.listen(port, () => {
+      console.log(`VertexLearnAI server is running on port ${port}`);
+    });
+  } catch (error) {
+    console.error("Failed to connect to MongoDB:", error.message);
+    process.exit(1);
+  }
+};
+
+startServer();
 });
