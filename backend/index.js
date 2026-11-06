@@ -23,8 +23,8 @@ const app  = express();
 
 // ── 1. CORS ──────────────────────────────────────────────────────────────────
 const allowedOrigins = [
-  "https://eduverse-1-cxg7.onrender.com",     // production frontend
-  "https://eduverse-bgfe-yti0.onrender.com",  // production backend
+ "https://vertex-learn-mts5pxmcv-supritha-internship-projects.vercel.app",     // production frontend
+  "https://vertexlearn-ai-backend.onrender.com",  // production backend
   "http://localhost:5173",                     // local vite
   "http://localhost:3000",                     // local fallback
 ];
