@@ -3,7 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import Home from "./pages/Home";
 import SignUp from "./pages/SignUp";
 import Login from "./pages/Login";
-export const serverUrl = "https://eduverse-bgfe-yti0.onrender.com";
+export const serverUrl = import.meta.env.VITE_API_URL;
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import getCurrentUser from "./customHooks/getCurrentUser";
