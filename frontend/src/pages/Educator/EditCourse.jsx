@@ -61,35 +61,75 @@ function EditCourse() {
     }
   }, [selectCourse]);
 
-  const handleEditCourse = async () => {
+ 
+const handleEditCourse = async () => {
     setLoading(true);
+
     const formData = new FormData();
+
     formData.append("title", title);
     formData.append("subTitle", subTitle);
     formData.append("description", description);
     formData.append("category", category);
     formData.append("level", level);
     formData.append("price", price);
-    formData.append("thumbnail", backendImage);
     formData.append("isPublished", isPublished);
-    try {
-      const result = await axios.post(serverUrl + `/api/course/editcourse/${courseId}`, formData, { withCredentials: true });
-      const updateData = result.data;
-      if (updateData.isPublished) {
-        const updated = courseData.map((c) => (c._id === courseId ? updateData : c));
-        if (!courseData.some((c) => c._id === courseId)) updated.push(updateData);
-        dispatch(setCourseData(updated));
-      } else {
-        dispatch(setCourseData(courseData.filter((c) => c._id !== courseId)));
-      }
-      navigate("/courses");
-      toast.success("Course Updated");
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Failed");
-    } finally {
-      setLoading(false);
+
+    if (backendImage) {
+        formData.append("thumbnail", backendImage);
     }
-  };
+
+    try {
+        const result = await axios.post(
+            `${serverUrl}/api/course/editcourse/${courseId}`,
+            formData,
+            {
+                withCredentials: true
+            }
+        );
+
+        // Get the actual updated course
+        const updateData = result.data.course;
+
+        // Update Redux
+        const currentCourses = courseData || [];
+
+        if (updateData.isPublished) {
+            const updated = currentCourses.some(
+                (c) => c._id === courseId
+            )
+                ? currentCourses.map((c) =>
+                    c._id === courseId ? updateData : c
+                )
+                : [...currentCourses, updateData];
+
+            dispatch(setCourseData(updated));
+
+        } else {
+            dispatch(
+                setCourseData(
+                    currentCourses.filter(
+                        (c) => c._id !== courseId
+                    )
+                )
+            );
+        }
+
+        toast.success("Course Updated Successfully");
+        navigate("/courses");
+
+    } catch (error) {
+        console.error("Course update error:", error);
+
+        toast.error(
+            error.response?.data?.message || "Failed to update course"
+        );
+
+    } finally {
+        setLoading(false);
+    }
+};
+
 
   const handleRemoveCourse = async () => {
     setLoading1(true);
