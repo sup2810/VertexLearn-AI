@@ -115,23 +115,31 @@ export const editCourse = async (req, res) => {
 
 
 
-    
 
-
-
-export const getCourseById = async (req,res) => {
+export const getCourseById = async (req, res) => {
     try {
-        const {courseId} = req.params
-        let course = await Course.findById(courseId)
-        if(!course){
-            return res.status(400).json({message:"Course is not found"})
+        const { courseId } = req.params;
+
+        const course = await Course.findOne({
+            _id: courseId,
+            creator: req.userId
+        });
+
+        if (!course) {
+            return res.status(404).json({
+                message: "Course not found or unauthorized"
+            });
         }
-        return res.status(200).json(course)
+
+        return res.status(200).json(course);
 
     } catch (error) {
-        return res.status(500).json({message:`failed to get Course by id ${error}`})
+        return res.status(500).json({
+            message: "Failed to get course",
+            error: error.message
+        });
     }
-}
+};
 
 
 export const removeCourse = async (req, res) => {
@@ -224,7 +232,6 @@ export const getCourseLecture = async (req,res) => {
           return res.status(404).json({message:"Course is not found"})
         }
        await course.populate("lectures")
-       await course.save()
        return res.status(200).json(course)
 
 
