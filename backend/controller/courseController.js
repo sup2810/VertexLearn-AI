@@ -64,6 +64,11 @@ export const editCourse = async (req, res) => {
             });
         }
 
+        // Upload thumbnail to Cloudinary
+if (req.file) {
+    course.thumbnail = await uploadOnCloudinary(req.file.path);
+}
+
         const fields = [
             "title",
             "subTitle",
