@@ -4,22 +4,56 @@ import Lecture from "../model/lectureModel.js"
 import User from "../model/userModel.js"
 
 // for Course
-export const createCourse = async (req,res) => {
+
+export const createCourse = async (req, res) => {
     try {
-        const {title , category} = req.body
-        if(!title || !category){
-            return res.status(400).json({message:"title or Category is required"})
+        const {
+            title,
+            subTitle,
+            description,
+            category,
+            level,
+            price
+        } = req.body;
+
+        if (!title || !category) {
+            return res.status(400).json({
+                message: "Course title and category are required"
+            });
         }
+
+        let thumbnailUrl = "";
+
+        if (req.file) {
+            thumbnailUrl = await uploadOnCloudinary(req.file.path);
+        }
+
         const course = await Course.create({
             title,
+            subTitle,
+            description,
             category,
-            creator:req.userId
-        })
-        return res.status(201).json(course)
+            level: level || "Beginner",
+            price: Number(price) || 0,
+            thumbnail: thumbnailUrl,
+            creator: req.userId
+        });
+
+        return res.status(201).json({
+            message: "Course created successfully",
+            course
+        });
+
     } catch (error) {
-         return res.status(500).json({message:`CreateCourse error ${error}`})
+        console.error("Create course error:", error);
+
+        return res.status(500).json({
+            message: "Failed to create course",
+            error: error.message
+        });
     }
-}
+};
+
 
 export const getPublishedCourses = async (req,res) => {
     try {
