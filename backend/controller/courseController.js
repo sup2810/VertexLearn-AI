@@ -241,11 +241,20 @@ export const getCourseLecture = async (req,res) => {
 }
 
 
+
 export const editLecture = async (req, res) => {
     try {
         const { lectureId } = req.params;
-        const { isPreviewFree, lectureTitle } = req.body;
+        const { lectureTitle, isPreviewFree } = req.body;
 
+        // Validate lecture ID
+        if (!lectureId) {
+            return res.status(400).json({
+                message: "Lecture ID is required"
+            });
+        }
+
+        // Find lecture
         const lecture = await Lecture.findById(lectureId);
 
         if (!lecture) {
@@ -254,7 +263,7 @@ export const editLecture = async (req, res) => {
             });
         }
 
-        // Verify course ownership
+        // Check course ownership
         const course = await Course.findOne({
             lectures: lectureId,
             creator: req.userId
@@ -266,19 +275,40 @@ export const editLecture = async (req, res) => {
             });
         }
 
+        // Update lecture title
         if (lectureTitle !== undefined) {
-            lecture.lectureTitle = lectureTitle;
+            if (!lectureTitle.trim()) {
+                return res.status(400).json({
+                    message: "Lecture title cannot be empty"
+                });
+            }
+
+            lecture.lectureTitle = lectureTitle.trim();
         }
 
+        // Update free preview
         if (isPreviewFree !== undefined) {
             lecture.isPreviewFree =
-                isPreviewFree === true || isPreviewFree === "true";
+                isPreviewFree === true ||
+                isPreviewFree === "true";
         }
 
+        // Upload new video if provided
         if (req.file) {
-            lecture.videoUrl = await uploadOnCloudinary(req.file.path);
+            const uploadedVideo = await uploadOnCloudinary(
+                req.file.path
+            );
+
+            if (!uploadedVideo) {
+                return res.status(500).json({
+                    message: "Lecture video upload failed"
+                });
+            }
+
+            lecture.videoUrl = uploadedVideo;
         }
 
+        // Save lecture
         await lecture.save();
 
         return res.status(200).json({
@@ -287,12 +317,15 @@ export const editLecture = async (req, res) => {
         });
 
     } catch (error) {
+        console.error("Edit lecture error:", error);
+
         return res.status(500).json({
             message: "Failed to edit lecture",
             error: error.message
         });
     }
 };
+
 
 
 
