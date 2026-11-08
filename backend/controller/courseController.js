@@ -113,43 +113,6 @@ export const editCourse = async (req, res) => {
 };
 
 
-        const fields = [
-            "title",
-            "subTitle",
-            "description",
-            "category",
-            "level",
-            "isPublished",
-            "price"
-        ];
-
-        fields.forEach((field) => {
-            if (req.body[field] !== undefined) {
-                course[field] = field === "isPublished"
-                    ? req.body[field] === "true" || req.body[field] === true
-                    : req.body[field];
-            }
-        });
-
-        if (req.file) {
-            course.thumbnail = await uploadOnCloudinary(req.file.path);
-        }
-
-        await course.save();
-
-        return res.status(200).json({
-            message: "Course updated successfully",
-            course
-        });
-
-    } catch (error) {
-        return res.status(500).json({
-            message: "Edit course failed",
-            error: error.message
-        });
-    }
-};
-
 
 export const getCourseById = async (req,res) => {
     try {
