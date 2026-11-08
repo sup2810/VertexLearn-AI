@@ -17,46 +17,81 @@ import featuresRouter from "./route/featuresRoute.js";
 const port = process.env.PORT || 4000;
 const app = express();
 
-// 1. CORS configuration
+// ==========================================
+// 1. CORS CONFIGURATION
+// ==========================================
+
 const allowedOrigins = [
-  "https://vertex-learn-70ka86uuf-supritha-internship-projects.vercel.app",
-  "https://vertex-learn-mts5pxmcv-supritha-internship-projects.vercel.app",
+  "https://vertex-learn-ai-tau.vercel.app",
   "http://localhost:5173",
-  "http://localhost:3000"
+  "http://localhost:3000",
 ];
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow requests without an origin (Postman/server-to-server)
+    if (!origin) {
       return callback(null, true);
     }
 
-    console.error("CORS blocked origin:", origin);
-    return callback(new Error("CORS origin not allowed"));
+    // Allow only approved frontend origins
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    console.error("Blocked CORS origin:", origin);
+    return callback(null, false);
   },
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+
   credentials: true,
-  optionsSuccessStatus: 204
+
+  methods: [
+    "GET",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "OPTIONS",
+  ],
+
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+  ],
+
+  optionsSuccessStatus: 204,
 };
 
-// CORS must come before routes
+// Apply CORS before all routes
 app.use(cors(corsOptions));
 
-// 2. Body parsers
+// Explicitly handle preflight requests
+app.options(/.*/, cors(corsOptions));
+
+// ==========================================
+// 2. BODY PARSERS
+// ==========================================
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// 3. Health check
+// ==========================================
+// 3. HEALTH CHECK
+// ==========================================
+
 app.get("/", (req, res) => {
-  res.json({
+  res.status(200).json({
+    success: true,
     status: "ok",
-    message: "VertexLearnAI API is running"
+    message: "VertexLearnAI API is running",
   });
 });
 
-// 4. API routes
+// ==========================================
+// 4. API ROUTES
+// ==========================================
+
 app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
 app.use("/api/course", courseRouter);
@@ -65,17 +100,27 @@ app.use("/api/review", reviewRouter);
 app.use("/api/ai", aiRouter);
 app.use("/api/features", featuresRouter);
 
-// 5. Global error handler
+// ==========================================
+// 5. GLOBAL ERROR HANDLER
+// ==========================================
+
 app.use((err, req, res, next) => {
   console.error("Global error:", err.stack || err.message);
 
+  if (res.headersSent) {
+    return next(err);
+  }
+
   res.status(500).json({
     success: false,
-    message: err.message || "Internal server error"
+    message: err.message || "Internal server error",
   });
 });
 
-// 6. Connect database and start server ONCE
+// ==========================================
+// 6. START SERVER
+// ==========================================
+
 const startServer = async () => {
   try {
     await connectDb();
@@ -83,7 +128,6 @@ const startServer = async () => {
     app.listen(port, "0.0.0.0", () => {
       console.log(`VertexLearnAI running on port ${port}`);
     });
-
   } catch (error) {
     console.error("MongoDB connection failed:", error);
     process.exit(1);
