@@ -1,222 +1,173 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useEffect, useState } from "react";
 import Nav from "../../component/Nav.jsx";
 import { useNavigate } from "react-router-dom";
-import ai from "../../assets/SearchAi.png";
-import { useSelector } from "react-redux";
-import Card from "../../component/Card";
+import axios from "axios";
+import { serverUrl } from "../../App.jsx";
+import { toast } from "react-toastify";
 
-const CATEGORIES = [
-  "App Development",
-  "AI/ML",
-  "AI Tools",
-  "Data Science",
-  "Data Analytics",
-  "Ethical Hacking",
-  "UI UX Designing",
-  "Web Development",
-  "Others",
-];
-
-function AllCourses() {
+function Courses() {
   const navigate = useNavigate();
-  const { courseData } = useSelector((state) => state.course);
-  const [category, setCategory] = useState([]);
-  const [filterCourses, setFilterCourses] = useState([]);
-  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
 
-  const toggleCategory = (val) => {
-    setCategory((prev) =>
-      prev.includes(val) ? prev.filter((c) => c !== val) : [...prev, val]
-    );
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
+
+  // Fetch educator courses
+  const fetchCourses = async () => {
+    try {
+      const result = await axios.get(
+        `${serverUrl}/api/course/getcreator`,
+        { withCredentials: true }
+      );
+
+      setCourses(result.data || []);
+    } catch (error) {
+      console.error("Fetch courses error:", error);
+      toast.error(
+        error.response?.data?.message || "Failed to load courses"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    setFilterCourses(courseData);
-  }, [courseData]);
+    fetchCourses();
+  }, []);
 
-  useEffect(() => {
-    let copy = courseData?.slice() || [];
-    if (category.length > 0) {
-      copy = copy.filter((c) => category.includes(c.category));
+  // Delete course
+  const handleDelete = async (courseId) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this course and its lectures?"
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      setDeletingId(courseId);
+
+      await axios.delete(
+        `${serverUrl}/api/course/remove/${courseId}`,
+        { withCredentials: true }
+      );
+
+      setCourses((prev) =>
+        prev.filter((course) => course._id !== courseId)
+      );
+
+      toast.success("Course deleted successfully");
+    } catch (error) {
+      console.error("Delete course error:", error);
+      toast.error(
+        error.response?.data?.message || "Failed to delete course"
+      );
+    } finally {
+      setDeletingId(null);
     }
-    setFilterCourses(copy);
-  }, [category, courseData]);
+  };
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", display: "flex" }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "var(--bg-primary)",
+      }}
+    >
       <Nav />
 
-      {/* Mobile Filter Toggle */}
-      <button
-        className="lg:hidden"
-        onClick={() => setIsSidebarVisible((p) => !p)}
-        style={{
-          position: "fixed",
-          top: 80,
-          left: 16,
-          zIndex: 40,
-          background: "var(--text-primary)",
-          color: "var(--bg-primary)",
-          border: "none",
-          borderRadius: 10,
-          padding: "8px 16px",
-          fontSize: 13,
-          fontWeight: 600,
-          cursor: "pointer",
-          boxShadow: "var(--shadow)",
-        }}
-      >
-        {isSidebarVisible ? "✕ Filters" : "⚙ Filters"}
-      </button>
-
-      {/* Mobile Overlay */}
-      {isSidebarVisible && (
-        <div
-          className="sidebar-overlay lg:hidden fixed inset-0 z-30"
-          onClick={() => setIsSidebarVisible(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={`ev-sidebar fixed top-0 left-0 h-screen overflow-y-auto z-40 transition-transform duration-300
-          ${isSidebarVisible ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
-        style={{ width: 260, paddingTop: 88 }}
-      >
-        <div style={{ padding: "0 20px 40px" }}>
-          {/* AI Search */}
-          <button
-            className="btn-primary"
-            style={{ width: "100%", justifyContent: "center", marginBottom: 24, fontSize: 14 }}
-            onClick={() => navigate("/search")}
-          >
-            <img src={ai} alt="" style={{ width: 20, height: 20, borderRadius: "50%" }} />
-            Search with AI
-          </button>
-
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              color: "var(--text-muted)",
-              marginBottom: 12,
-            }}
-          >
-            Filter by Category
-          </div>
-
-          {/* Clear Filter */}
-          {category.length > 0 && (
-            <button
-              onClick={() => setCategory([])}
-              style={{
-                background: "none",
-                border: "1px solid var(--border)",
-                borderRadius: 8,
-                padding: "6px 12px",
-                fontSize: 12,
-                color: "var(--accent)",
-                cursor: "pointer",
-                marginBottom: 12,
-                fontWeight: 600,
-              }}
-            >
-              Clear all ({category.length})
-            </button>
-          )}
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {CATEGORIES.map((cat) => (
-              <label
-                key={cat}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "9px 12px",
-                  borderRadius: 10,
-                  cursor: "pointer",
-                  background: category.includes(cat) ? "rgba(108,99,255,0.08)" : "transparent",
-                  border: `1px solid ${category.includes(cat) ? "var(--accent)" : "transparent"}`,
-                  transition: "all 0.2s",
-                  fontSize: 14,
-                  color: category.includes(cat) ? "var(--accent)" : "var(--text-secondary)",
-                  fontWeight: category.includes(cat) ? 600 : 400,
-                }}
-              >
-                <input
-                  type="checkbox"
-                  className="ev-check"
-                  checked={category.includes(cat)}
-                  onChange={() => toggleCategory(cat)}
-                  style={{ display: "none" }}
-                />
-                <span
-                  style={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: 5,
-                    border: `2px solid ${category.includes(cat) ? "var(--accent)" : "var(--border-hover)"}`,
-                    background: category.includes(cat) ? "var(--accent)" : "transparent",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 10,
-                    color: "white",
-                    flexShrink: 0,
-                    transition: "all 0.2s",
-                  }}
-                >
-                  {category.includes(cat) ? "✓" : ""}
-                </span>
-                {cat}
-              </label>
-            ))}
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Content */}
       <main
         style={{
-          flex: 1,
-          paddingTop: 96,
-          paddingLeft: 0,
-          paddingRight: 24,
-          paddingBottom: 48,
-          marginLeft: 260,
+          padding: "110px 24px 48px",
+          maxWidth: 1200,
+          margin: "0 auto",
         }}
-        className="lg:ml-65 ml-0 px-4"
       >
         {/* Header */}
-        <div style={{ marginBottom: 32, paddingLeft: 8 }}>
-          <div className="section-label" style={{ marginBottom: 8 }}>
-            All Courses
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 16,
+            marginBottom: 32,
+          }}
+        >
+          <div>
+            <div className="section-label" style={{ marginBottom: 8 }}>
+              Educator Dashboard
+            </div>
+
+            <h1
+              style={{
+                fontFamily: "Syne, sans-serif",
+                fontSize: 32,
+                fontWeight: 800,
+                color: "var(--text-primary)",
+              }}
+            >
+              My Courses
+            </h1>
+
+            <p style={{ color: "var(--text-muted)", marginTop: 8 }}>
+              Manage your courses, lectures, and publishing status.
+            </p>
           </div>
-          <h1
-            style={{
-              fontFamily: "Syne, sans-serif",
-              fontSize: 32,
-              fontWeight: 800,
-              color: "var(--text-primary)",
-              marginBottom: 8,
-            }}
+
+          <button
+            className="btn-primary"
+            onClick={() => navigate("/createcourse")}
           >
-            {category.length > 0
-              ? `${filterCourses?.length || 0} courses found`
-              : `Explore ${courseData?.length || 0} courses`}
-          </h1>
-          <p style={{ color: "var(--text-muted)", fontSize: 15 }}>
-            {category.length > 0
-              ? `Filtered by: ${category.join(", ")}`
-              : "Discover courses that match your goals"}
-          </p>
+            + Create Course
+          </button>
         </div>
 
-        {/* Grid */}
-        {filterCourses?.length > 0 ? (
+        {/* Loading */}
+        {loading ? (
+          <div style={{ textAlign: "center", padding: 60 }}>
+            <p style={{ color: "var(--text-muted)" }}>
+              Loading your courses...
+            </p>
+          </div>
+        ) : courses.length === 0 ? (
+          /* Empty state */
+          <div
+            style={{
+              textAlign: "center",
+              padding: "80px 20px",
+              border: "1px solid var(--border)",
+              borderRadius: 16,
+              background: "var(--bg-secondary)",
+            }}
+          >
+            <div style={{ fontSize: 48, marginBottom: 16 }}>📚</div>
+
+            <h2
+              style={{
+                fontFamily: "Syne, sans-serif",
+                fontSize: 22,
+                fontWeight: 700,
+                color: "var(--text-primary)",
+                marginBottom: 8,
+              }}
+            >
+              No courses yet
+            </h2>
+
+            <p style={{ color: "var(--text-muted)", marginBottom: 24 }}>
+              Create your first course and start teaching.
+            </p>
+
+            <button
+              className="btn-primary"
+              onClick={() => navigate("/createcourse")}
+            >
+              Create Your First Course
+            </button>
+          </div>
+        ) : (
+          /* Course grid */
           <div
             style={{
               display: "grid",
@@ -224,44 +175,147 @@ function AllCourses() {
               gap: 24,
             }}
           >
-            {filterCourses.map((course, index) => (
+            {courses.map((course) => (
               <div
                 key={course._id}
-                className="animate-fade-up"
-                style={{ animationDelay: `${Math.min(index * 0.05, 0.4)}s` }}
+                style={{
+                  border: "1px solid var(--border)",
+                  borderRadius: 16,
+                  overflow: "hidden",
+                  background: "var(--bg-secondary)",
+                  boxShadow: "var(--shadow)",
+                }}
               >
-                <Card
-                  thumbnail={course.thumbnail}
-                  title={course.title}
-                  category={course.category}
-                  price={course.price}
-                  id={course._id}
-                  reviews={course.reviews}
-                />
+                {/* Thumbnail */}
+                <div
+                  style={{
+                    height: 180,
+                    background: "var(--bg-tertiary)",
+                    overflow: "hidden",
+                  }}
+                >
+                  {course.thumbnail ? (
+                    <img
+                      src={course.thumbnail}
+                      alt={course.title}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        height: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 48,
+                      }}
+                    >
+                      📘
+                    </div>
+                  )}
+                </div>
+
+                {/* Course info */}
+                <div style={{ padding: 20 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 8,
+                      marginBottom: 12,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      {course.category}
+                    </span>
+
+                    <span
+                      style={{
+                        padding: "5px 10px",
+                        borderRadius: 20,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        background: course.isPublished
+                          ? "rgba(34,197,94,0.12)"
+                          : "rgba(245,158,11,0.12)",
+                        color: course.isPublished
+                          ? "#16a34a"
+                          : "#d97706",
+                      }}
+                    >
+                      {course.isPublished ? "Published" : "Draft"}
+                    </span>
+                  </div>
+
+                  <h3
+                    style={{
+                      fontFamily: "Syne, sans-serif",
+                      fontSize: 18,
+                      fontWeight: 700,
+                      color: "var(--text-primary)",
+                      marginBottom: 8,
+                    }}
+                  >
+                    {course.title}
+                  </h3>
+
+                  <p
+                    style={{
+                      color: "var(--text-muted)",
+                      fontSize: 13,
+                      marginBottom: 16,
+                    }}
+                  >
+                    {course.lectures?.length || 0} lectures
+                  </p>
+
+                  {/* Actions */}
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 10,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <button
+                      className="btn-primary"
+                      style={{ flex: 1, justifyContent: "center" }}
+                      onClick={() =>
+                        navigate(`/editcourse/${course._id}`)
+                      }
+                    >
+                      Edit Course
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(course._id)}
+                      disabled={deletingId === course._id}
+                      style={{
+                        padding: "10px 14px",
+                        borderRadius: 10,
+                        border: "1px solid #ef4444",
+                        background: "transparent",
+                        color: "#ef4444",
+                        cursor: "pointer",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {deletingId === course._id ? "Deleting..." : "Delete"}
+                    </button>
+                  </div>
+                </div>
               </div>
             ))}
-          </div>
-        ) : (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "80px 20px",
-              color: "var(--text-muted)",
-            }}
-          >
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
-            <h3
-              style={{
-                fontFamily: "Syne, sans-serif",
-                fontSize: 20,
-                fontWeight: 700,
-                color: "var(--text-secondary)",
-                marginBottom: 8,
-              }}
-            >
-              No courses found
-            </h3>
-            <p style={{ fontSize: 15 }}>Try adjusting your filters or search with AI</p>
           </div>
         )}
       </main>
@@ -269,4 +323,4 @@ function AllCourses() {
   );
 }
 
-export default AllCourses;
+export default Courses;
