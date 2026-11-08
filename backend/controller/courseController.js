@@ -48,7 +48,6 @@ export const getCreatorCourses = async (req,res) => {
 }
 
 
-
 export const editCourse = async (req, res) => {
     try {
         const { courseId } = req.params;
@@ -64,11 +63,6 @@ export const editCourse = async (req, res) => {
             });
         }
 
-        // Upload thumbnail to Cloudinary
-if (req.file) {
-    course.thumbnail = await uploadOnCloudinary(req.file.path);
-}
-
         const fields = [
             "title",
             "subTitle",
@@ -81,15 +75,17 @@ if (req.file) {
 
         fields.forEach((field) => {
             if (req.body[field] !== undefined) {
-                course[field] = field === "isPublished"
-                    ? req.body[field] === true || req.body[field] === "true"
-                    : req.body[field];
+                course[field] =
+                    field === "isPublished"
+                        ? req.body[field] === true ||
+                          req.body[field] === "true"
+                        : req.body[field];
             }
         });
 
-        // Upload thumbnail to Cloudinary
         if (req.file) {
-            const thumbnailUrl = await uploadOnCloudinary(req.file.path);
+            const thumbnailUrl =
+                await uploadOnCloudinary(req.file.path);
 
             if (!thumbnailUrl) {
                 return res.status(500).json({
@@ -116,6 +112,10 @@ if (req.file) {
         });
     }
 };
+
+
+
+    
 
 
 
