@@ -6,7 +6,9 @@ import { searchWithAi } from "../controller/searchController.js"
 
 const courseRouter = express.Router()
 //for Courses
-courseRouter.post("/create" ,isAuth, createCourse )
+courseRouter.post( "/create", isAuth,upload.single("thumbnail"),
+createCourse
+);
 courseRouter.get("/getpublished" , getPublishedCourses)
 courseRouter.get("/getcreator", isAuth , getCreatorCourses)
 courseRouter.post("/editcourse/:courseId" , isAuth ,upload.single("thumbnail") , editCourse )
