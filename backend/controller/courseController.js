@@ -47,26 +47,58 @@ export const getCreatorCourses = async (req,res) => {
     }
 }
 
-export const editCourse = async (req,res) => {
-    try {
-        const {courseId} = req.params
-        const {title ,subTitle , description , category , level , isPublished , price} = req.body
-        let thumbnail 
-        if(req.file){
-            thumbnail = await uploadOnCloudinary(req.file.path)
-        }
-        let course = await Course.findById(courseId)
-        if(!course){
-            return res.status(400).json({message:"Course is not found"})
-        }
-        const updateData = {title ,subTitle , description , category , level , isPublished , price , thumbnail}
 
-        course = await Course.findByIdAndUpdate(courseId , updateData , {new:true})
-         return res.status(200).json(course)
+export const editCourse = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+
+        const course = await Course.findOne({
+            _id: courseId,
+            creator: req.userId
+        });
+
+        if (!course) {
+            return res.status(404).json({
+                message: "Course not found or unauthorized"
+            });
+        }
+
+        const fields = [
+            "title",
+            "subTitle",
+            "description",
+            "category",
+            "level",
+            "isPublished",
+            "price"
+        ];
+
+        fields.forEach((field) => {
+            if (req.body[field] !== undefined) {
+                course[field] = field === "isPublished"
+                    ? req.body[field] === "true" || req.body[field] === true
+                    : req.body[field];
+            }
+        });
+
+        if (req.file) {
+            course.thumbnail = await uploadOnCloudinary(req.file.path);
+        }
+
+        await course.save();
+
+        return res.status(200).json({
+            message: "Course updated successfully",
+            course
+        });
+
     } catch (error) {
-        return res.status(500).json({message:`failed to edit Course ${error}`})
+        return res.status(500).json({
+            message: "Edit course failed",
+            error: error.message
+        });
     }
-}
+};
 
 
 export const getCourseById = async (req,res) => {
@@ -83,42 +115,88 @@ export const getCourseById = async (req,res) => {
     }
 }
 
-export const removeCourse = async (req,res) => {
+
+export const removeCourse = async (req, res) => {
     try {
-        const {courseId}= req.params
-        let course = await Course.findById(courseId)
-        if(!course){
-            return res.status(400).json({message:"Course is not found"})
+        const { courseId } = req.params;
+
+        const course = await Course.findOne({
+            _id: courseId,
+            creator: req.userId
+        });
+
+        if (!course) {
+            return res.status(404).json({
+                message: "Course not found or unauthorized"
+            });
         }
-        course = await Course.findByIdAndDelete(courseId , {new:true})
-        return res.status(200).json({message:"Course removed"})
+
+        // Delete associated lectures
+        await Lecture.deleteMany({
+            _id: { $in: course.lectures }
+        });
+
+        await Course.findByIdAndDelete(courseId);
+
+        return res.status(200).json({
+            message: "Course and its lectures removed successfully"
+        });
+
     } catch (error) {
-        return res.status(500).json({message:`failed to delete Course by id ${error}`})
+        return res.status(500).json({
+            message: "Failed to delete course",
+            error: error.message
+        });
     }
-}
+};
+
 
 //for Lecture
 
-export const createLecture = async (req,res) => {
+
+export const createLecture = async (req, res) => {
     try {
-       const {lectureTitle} = req.body
-       const {courseId} = req.params
-       if(!lectureTitle || !courseId){
-        return res.status(400).json({message:"lectureTitle is required"})
-       }
-       const lecture = await Lecture.create({lectureTitle})
-       const course = await Course.findById(courseId)
-       if(course){
-        course.lectures.push(lecture._id)
-       }
-       await course.populate("lectures")
-       await course.save()
-       return res.status(201).json({lecture , course})
+        const { lectureTitle } = req.body;
+        const { courseId } = req.params;
+
+        if (!lectureTitle) {
+            return res.status(400).json({
+                message: "Lecture title is required"
+            });
+        }
+
+        const course = await Course.findOne({
+            _id: courseId,
+            creator: req.userId
+        });
+
+        if (!course) {
+            return res.status(404).json({
+                message: "Course not found or unauthorized"
+            });
+        }
+
+        const lecture = await Lecture.create({
+            lectureTitle
+        });
+
+        course.lectures.push(lecture._id);
+        await course.save();
+
+        return res.status(201).json({
+            message: "Lecture created successfully",
+            lecture,
+            course
+        });
 
     } catch (error) {
-        return res.status(500).json({message:`failed to create Lecture ${error}`})
+        return res.status(500).json({
+            message: "Create lecture failed",
+            error: error.message
+        });
     }
-}
+};
+
 
 export const getCourseLecture = async (req,res) => {
     try {
@@ -137,50 +215,94 @@ export const getCourseLecture = async (req,res) => {
     }
 }
 
-export const editLecture = async (req,res) => {
-    try {
-        const {lectureId} = req.params
-        const {isPreviewFree , lectureTitle} = req.body
-        const lecture = await Lecture.findById(lectureId)
-        if(!lecture){
-            return res.status(404).json({message:"Lecture is not found"})
-        }
-        let videoUrl
-        if(req.file){
-            videoUrl = await uploadOnCloudinary(req.file.path)
-            lecture.videoUrl = videoUrl
-        }
-        if(lectureTitle){
-            lecture.lectureTitle= lectureTitle
-        }
-        lecture.isPreviewFree = isPreviewFree
 
-        await lecture.save()
-        return res.status(200).json(lecture)
+export const editLecture = async (req, res) => {
+    try {
+        const { lectureId } = req.params;
+        const { isPreviewFree, lectureTitle } = req.body;
+
+        const lecture = await Lecture.findById(lectureId);
+
+        if (!lecture) {
+            return res.status(404).json({
+                message: "Lecture not found"
+            });
+        }
+
+        // Verify course ownership
+        const course = await Course.findOne({
+            lectures: lectureId,
+            creator: req.userId
+        });
+
+        if (!course) {
+            return res.status(403).json({
+                message: "You are not authorized to edit this lecture"
+            });
+        }
+
+        if (lectureTitle !== undefined) {
+            lecture.lectureTitle = lectureTitle;
+        }
+
+        if (isPreviewFree !== undefined) {
+            lecture.isPreviewFree =
+                isPreviewFree === true || isPreviewFree === "true";
+        }
+
+        if (req.file) {
+            lecture.videoUrl = await uploadOnCloudinary(req.file.path);
+        }
+
+        await lecture.save();
+
+        return res.status(200).json({
+            message: "Lecture updated successfully",
+            lecture
+        });
+
     } catch (error) {
-          return res.status(500).json({message:`failed to edit Lecture ${error}`})
+        return res.status(500).json({
+            message: "Failed to edit lecture",
+            error: error.message
+        });
     }
-}
+};
 
-export const removeLecture = async (req,res) => {
+
+
+export const removeLecture = async (req, res) => {
     try {
-        const {lectureId} = req.params
-        const lecture = await Lecture.findByIdAndDelete(lectureId)
-        if(!lecture){
-             return res.status(404).json({message:"Lecture not found"})
+        const { lectureId } = req.params;
+
+        const course = await Course.findOne({
+            lectures: lectureId,
+            creator: req.userId
+        });
+
+        if (!course) {
+            return res.status(404).json({
+                message: "Lecture not found or unauthorized"
+            });
         }
 
-        await Course.updateOne(
-            {lectures: lectureId},
-            {$pull:{lectures: lectureId}}
-        )
-        return res.status(200).json({message:"Lecture Remove Successfully"})
-        }
-    
-     catch (error) {
-        return res.status(500).json({message:`Failed to remove Lectures ${error}`})
+        await Lecture.findByIdAndDelete(lectureId);
+
+        course.lectures.pull(lectureId);
+        await course.save();
+
+        return res.status(200).json({
+            message: "Lecture removed successfully"
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            message: "Failed to remove lecture",
+            error: error.message
+        });
     }
-}
+};
+
 
 // get Creator
  
