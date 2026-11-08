@@ -48,6 +48,7 @@ export const getCreatorCourses = async (req,res) => {
 }
 
 
+
 export const editCourse = async (req, res) => {
     try {
         const { courseId } = req.params;
@@ -62,6 +63,55 @@ export const editCourse = async (req, res) => {
                 message: "Course not found or unauthorized"
             });
         }
+
+        const fields = [
+            "title",
+            "subTitle",
+            "description",
+            "category",
+            "level",
+            "price",
+            "isPublished"
+        ];
+
+        fields.forEach((field) => {
+            if (req.body[field] !== undefined) {
+                course[field] = field === "isPublished"
+                    ? req.body[field] === true || req.body[field] === "true"
+                    : req.body[field];
+            }
+        });
+
+        // Upload thumbnail to Cloudinary
+        if (req.file) {
+            const thumbnailUrl = await uploadOnCloudinary(req.file.path);
+
+            if (!thumbnailUrl) {
+                return res.status(500).json({
+                    message: "Thumbnail upload failed"
+                });
+            }
+
+            course.thumbnail = thumbnailUrl;
+        }
+
+        await course.save();
+
+        return res.status(200).json({
+            message: "Course updated successfully",
+            course
+        });
+
+    } catch (error) {
+        console.error("Edit course error:", error);
+
+        return res.status(500).json({
+            message: "Failed to edit course",
+            error: error.message
+        });
+    }
+};
+
 
         const fields = [
             "title",
