@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import Nav from "../../component/Nav";
+import Nav from "../../component/Nav.jsx";
 import { useNavigate } from "react-router-dom";
 import ai from "../../assets/SearchAi.png";
 import { useSelector } from "react-redux";
