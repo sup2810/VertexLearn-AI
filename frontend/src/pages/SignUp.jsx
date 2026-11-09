@@ -40,22 +40,41 @@ function SignUp() {
     }
   };
 
-  const googleSignUp = async () => {
-    try {
-      const response = await signInWithPopup(auth, provider);
-      const user = response.user;
-      const result = await axios.post(
-        serverUrl + "/api/auth/googleauth",
-        { name: user.displayName, email: user.email, role },
-        { withCredentials: true }
-      );
-      dispatch(setUserData(result.data));
-      navigate("/");
-      toast.success("Signup Successfully");
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Google signup failed");
-    }
-  };
+  
+const googleSignUp = async () => {
+  try {
+    setLoading(true);
+
+    const response = await signInWithPopup(auth, provider);
+    const user = response.user;
+
+    const result = await axios.post(
+      serverUrl + "/api/auth/googleauth",
+      {
+        name: user.displayName,
+        email: user.email,
+        role
+      },
+      { withCredentials: true }
+    );
+
+    dispatch(setUserData(result.data));
+    navigate("/");
+    toast.success("Google signup successful");
+
+  } catch (error) {
+    console.error("Google signup error:", error);
+
+    toast.error(
+      error.response?.data?.message ||
+      error.message ||
+      "Google signup failed"
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div
