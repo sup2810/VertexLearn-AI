@@ -28,7 +28,7 @@ export const createCourse = async (req, res) => {
         let thumbnailUrl = "";
 
         if (req.file) {
-            thumbnailUrl = await uploadOnCloudinary(req.file.path);
+            thumbnailUrl = await uploadImageOnCloudinary(req.file.path);
         }
 
         const course = await Course.create({
@@ -122,7 +122,7 @@ export const editCourse = async (req, res) => {
 
         if (req.file) {
             const thumbnailUrl =
-                await uploadOnCloudinary(req.file.path);
+    await uploadImageOnCloudinary(req.file.path);
 
             if (!thumbnailUrl) {
                 return res.status(500).json({
@@ -332,9 +332,10 @@ export const editLecture = async (req, res) => {
 
         // Upload new video if provided
         if (req.file) {
-            const uploadedVideo = await uploadOnCloudinary(
-                req.file.path
-            );
+           const uploadedVideo = await uploadVideoOnCloudinary(
+    req.file.path
+);
+            
 
             if (!uploadedVideo) {
                 return res.status(500).json({
