@@ -39,22 +39,38 @@ function Login() {
     }
   };
 
-  const googleLogin = async () => {
-    try {
-      const response = await signInWithPopup(auth, provider);
-      const user = response.user;
-      const result = await axios.post(
-        serverUrl + "/api/auth/googleauth",
-        { name: user.displayName, email: user.email, role: "" },
-        { withCredentials: true }
-      );
-      dispatch(setUserData(result.data));
-      navigate("/");
-      toast.success("Login Successfully");
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Google Login Failed");
-    }
-  };
+  
+const googleLogin = async () => {
+  try {
+    const response = await signInWithPopup(auth, provider);
+    const user = response.user;
+
+    const result = await axios.post(
+      serverUrl + "/api/auth/googleauth",
+      {
+        name: user.displayName,
+        email: user.email,
+        role: ""
+      },
+      { withCredentials: true }
+    );
+
+    dispatch(setUserData(result.data));
+    toast.success("Login Successfully");
+    navigate("/");
+
+  } catch (error) {
+    console.error("Google Login Error:", error);
+    console.error("Firebase error code:", error.code);
+    console.error("Backend error:", error.response?.data);
+
+    toast.error(
+      error.response?.data?.message ||
+      error.message ||
+      "Google Login Failed"
+    );
+  }
+};
 
   return (
     <div

@@ -162,32 +162,46 @@ function EditLecture() {
           )}
 
           {/* Upload Video */}
-          <div>
-            <label className="block mb-2 font-medium">
-              Upload New Video
-            </label>
+<div>
+  <label className="block mb-2 font-medium">
+    Upload New Video (MP4)
+  </label>
 
-            <input
-              type="file"
-              accept="video/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                setVideoFile(file || null);
-              }}
-              className="w-full p-3 rounded-lg bg-gray-700 border border-gray-600"
-            />
+  <input
+    type="file"
+    accept="video/mp4,video/*"
+    onChange={(e) => {
+      const file = e.target.files?.[0];
 
-            {videoFile && (
-              <p className="text-sm text-green-400 mt-2">
-                Selected: {videoFile.name}
-              </p>
-            )}
+      if (file && !file.type.startsWith("video/")) {
+        toast.error("Please select a valid video file");
+        e.target.value = "";
+        return;
+      }
 
-            <p className="text-sm text-gray-400 mt-2">
-              Leave empty to keep the existing video.
-            </p>
-          </div>
+      setVideoFile(file || null);
+    }}
+    className="w-full p-3 rounded-lg bg-gray-700 border border-gray-600"
+  />
 
+  {videoFile && (
+    <div className="mt-3">
+      <p className="text-sm text-green-400 mb-2">
+        Selected: {videoFile.name}
+      </p>
+
+      <video
+        src={URL.createObjectURL(videoFile)}
+        controls
+        className="w-full rounded-lg max-h-80 bg-black"
+      />
+    </div>
+  )}
+
+  <p className="text-sm text-gray-400 mt-2">
+    Leave empty to keep the existing video.
+  </p>
+</div>
           {/* Preview Free */}
           <div className="flex items-center justify-between bg-gray-700 p-4 rounded-lg">
             <div>
