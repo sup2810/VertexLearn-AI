@@ -1,4 +1,4 @@
-import uploadOnCloudinary from "../config/cloudinary.js"
+import { uploadImageOnCloudinary } from "../config/cloudinary.js";
 import User from "../model/userModel.js"
 import Course from "../model/courseModel.js"
 import mongoose from "mongoose"
@@ -27,7 +27,7 @@ export const updateProfile = async (req, res) => {
         const { description, name } = req.body
         let photoUrl
         if (req.file) {
-            photoUrl = await uploadOnCloudinary(req.file.path)
+           photoUrl = await uploadImageOnCloudinary(req.file.path);
         }
 
         const user = await User.findByIdAndUpdate(
