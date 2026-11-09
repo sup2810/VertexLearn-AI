@@ -1,11 +1,7 @@
+
+import "dotenv/config";
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
-
-console.log("Cloudinary environment check:", {
-    cloudNameExists: !!process.env.CLOUDINARY_CLOUD_NAME,
-    apiKeyExists: !!process.env.CLOUDINARY_API_KEY,
-    apiSecretExists: !!process.env.CLOUDINARY_API_SECRET
-});
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -13,21 +9,15 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-const uploadOnCloudinary = async (filePath) => {
+const uploadToCloudinary = async (filePath, resourceType) => {
     if (!filePath) return null;
 
     try {
-        const uploadResult = await cloudinary.uploader.upload(
-            filePath,
-            { resource_type: "image" }
-        );
+        const result = await cloudinary.uploader.upload(filePath, {
+            resource_type: resourceType
+        });
 
-        return uploadResult.secure_url;
-
-    } catch (error) {
-        console.error("Cloudinary upload error:", error);
-        throw error;
-
+        return result.secure_url;
     } finally {
         if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);
@@ -35,4 +25,12 @@ const uploadOnCloudinary = async (filePath) => {
     }
 };
 
-export default uploadOnCloudinary;
+// For course thumbnails
+export const uploadImageOnCloudinary = (filePath) => {
+    return uploadToCloudinary(filePath, "image");
+};
+
+// For lecture videos
+export const uploadVideoOnCloudinary = (filePath) => {
+    return uploadToCloudinary(filePath, "video");
+};
