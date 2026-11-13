@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useRef, useEffect } from "react";
 import logo from "../assets/logo.jpg";
 import google from "../assets/google.jpg";
 import { IoEyeOutline, IoEye } from "react-icons/io5";
@@ -10,7 +11,7 @@ import { serverUrl } from "../App";
 import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { setUserData } from "../redux/userSlice";
-import { signInWithPopup } from "@firebase/auth";
+import { getRedirectResult, signInWithRedirect } from "firebase/auth";
 import { auth, provider } from "../../utils/firebase";
 
 function Login() {
@@ -18,6 +19,7 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const googleLoginInProgress = useRef(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -38,39 +40,42 @@ function Login() {
       toast.error(error.response?.data?.message || "Login failed");
     }
   };
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const response = await getRedirectResult(auth);
+        if (!response || !active) return;
+        const user = response.user;
+        const result = await axios.post(serverUrl + "/api/auth/googleauth",
+          { name: user.displayName, email: user.email, role: "" },
+          { withCredentials: true });
+        if (!active) return;
+        dispatch(setUserData(result.data));
+        toast.success("Login Successfully");
+        navigate("/");
+      } catch (error) {
+        console.error("Google redirect login error:", error);
+        if (active && error.code !== "auth/no-auth-event")
+          toast.error(error.response?.data?.message || error.message || "Google Login Failed");
+      }
+    })();
+    return () => { active = false; };
+  }, [dispatch, navigate]);
 
-  
-const googleLogin = async () => {
-  try {
-    const response = await signInWithPopup(auth, provider);
-    const user = response.user;
-
-    const result = await axios.post(
-      serverUrl + "/api/auth/googleauth",
-      {
-        name: user.displayName,
-        email: user.email,
-        role: ""
-      },
-      { withCredentials: true }
-    );
-
-    dispatch(setUserData(result.data));
-    toast.success("Login Successfully");
-    navigate("/");
-
-  } catch (error) {
-    console.error("Google Login Error:", error);
-    console.error("Firebase error code:", error.code);
-    console.error("Backend error:", error.response?.data);
-
-    toast.error(
-      error.response?.data?.message ||
-      error.message ||
-      "Google Login Failed"
-    );
-  }
-};
+  const googleLogin = async () => {
+    if (googleLoginInProgress.current || loading) return;
+    googleLoginInProgress.current = true;
+    setLoading(true);
+    try {
+      await signInWithRedirect(auth, provider);
+    } catch (error) {
+      console.error("Google redirect start error:", error);
+      toast.error(error.message || "Could not start Google sign-in");
+      googleLoginInProgress.current = false;
+      setLoading(false);
+    }
+  };
 
   return (
     <div
@@ -252,9 +257,11 @@ const googleLogin = async () => {
             className="btn-outline"
             style={{ justifyContent: "center", height: 46 }}
             onClick={googleLogin}
+            disabled={loading}
+            style={{ justifyContent: "center", height: 46, opacity: loading ? 0.7 : 1, cursor: loading ? "not-allowed" : "pointer" }}
           >
             <img src={google} alt="" style={{ width: 20, height: 20, borderRadius: 4 }} />
-            Continue with Google
+            {loading ? "Connecting to Google..." : "Continue with Google"}
           </button>
 
           <p style={{ fontSize: 14, color: "var(--text-muted)", textAlign: "center", margin: 0 }}>

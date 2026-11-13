@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useRef, useEffect } from "react";
 import logo from "../assets/logo.jpg";
 import google from "../assets/google.jpg";
 import { IoEyeOutline, IoEye } from "react-icons/io5";
@@ -9,7 +10,7 @@ import { toast } from "react-toastify";
 import { ClipLoader } from "react-spinners";
 import { useDispatch } from "react-redux";
 import { setUserData } from "../redux/userSlice";
-import { signInWithPopup } from "firebase/auth";
+import { getRedirectResult, signInWithRedirect } from "firebase/auth";
 import { auth, provider } from "../../utils/firebase";
 
 function SignUp() {
@@ -19,6 +20,7 @@ function SignUp() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("student");
   const [loading, setLoading] = useState(false);
+  const googleSignUpInProgress = useRef(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -39,41 +41,45 @@ function SignUp() {
       toast.error(error.response?.data?.message || "Signup failed");
     }
   };
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const response = await getRedirectResult(auth);
+        if (!response || !active) return;
+        const user = response.user;
+        const savedRole = sessionStorage.getItem("vertexGoogleSignupRole") || "student";
+        sessionStorage.removeItem("vertexGoogleSignupRole");
+        const result = await axios.post(serverUrl + "/api/auth/googleauth",
+          { name: user.displayName, email: user.email, role: savedRole },
+          { withCredentials: true });
+        if (!active) return;
+        dispatch(setUserData(result.data));
+        toast.success("Google signup successful");
+        navigate("/");
+      } catch (error) {
+        console.error("Google redirect signup error:", error);
+        if (active && error.code !== "auth/no-auth-event")
+          toast.error(error.response?.data?.message || error.message || "Google signup failed");
+      }
+    })();
+    return () => { active = false; };
+  }, [dispatch, navigate]);
 
-  
-const googleSignUp = async () => {
-  try {
+  const googleSignUp = async () => {
+    if (googleSignUpInProgress.current || loading) return;
+    googleSignUpInProgress.current = true;
     setLoading(true);
-
-    const response = await signInWithPopup(auth, provider);
-    const user = response.user;
-
-    const result = await axios.post(
-      serverUrl + "/api/auth/googleauth",
-      {
-        name: user.displayName,
-        email: user.email,
-        role
-      },
-      { withCredentials: true }
-    );
-
-    dispatch(setUserData(result.data));
-    navigate("/");
-    toast.success("Google signup successful");
-
-  } catch (error) {
-    console.error("Google signup error:", error);
-
-    toast.error(
-      error.response?.data?.message ||
-      error.message ||
-      "Google signup failed"
-    );
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      sessionStorage.setItem("vertexGoogleSignupRole", role);
+      await signInWithRedirect(auth, provider);
+    } catch (error) {
+      console.error("Google redirect signup start error:", error);
+      toast.error(error.message || "Could not start Google signup");
+      googleSignUpInProgress.current = false;
+      setLoading(false);
+    }
+  };
 
 
   return (
@@ -327,9 +333,10 @@ const googleSignUp = async () => {
             className="btn-outline"
             style={{ justifyContent: "center", height: 46 }}
             onClick={googleSignUp}
+            disabled={loading}
           >
             <img src={google} alt="" style={{ width: 20, height: 20, borderRadius: 4 }} />
-            Continue with Google
+            {loading ? "Connecting to Google..." : "Continue with Google"}
           </button>
 
           <p style={{ fontSize: 14, color: "var(--text-muted)", textAlign: "center", margin: 0 }}>
